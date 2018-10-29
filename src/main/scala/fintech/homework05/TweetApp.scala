@@ -42,11 +42,11 @@ case class LikeRequest(id: String)
 sealed trait Result[T] {
 }
 
-case class Error(errorMessage : String = "Some errors ocupped") extends Result[Tweet]{
+final case class Error(errorMessage : String = "Some errors ocurred") extends Result[Tweet]{
   def getErrorMessage() : String = errorMessage
 }
 
-case class Success(result : Option[Tweet] = Option.empty[Tweet]) extends Result[Tweet] {
+final case class Success(result : Option[Tweet] = Option.empty[Tweet]) extends Result[Tweet] {
   def getResult(): Option[Tweet] = result
 }
 
@@ -59,12 +59,13 @@ trait TweetStorage {
 }
 
 class Storage(private var map: Map[String, Tweet] = Map.empty) extends TweetStorage {
+  final val MAX_TWEET_LEN : Int = 280
   override def writeTweet(tweet: Tweet): Result[Tweet] = {
     if (map contains tweet.id) {
       Error("Failed to write a new tweet : incorrect id")
     }
     else {
-      if (tweet.text.length > 280) {
+      if (tweet.text.length > MAX_TWEET_LEN) {
         Error("Tweet is too long")
       }
       else {
@@ -106,9 +107,7 @@ class TweetApi(storage: TweetStorage) {
   }
 
   def getTweet(request: GetTweetRequest): Result[Tweet] = {
-    val res = storage.findTweet(request.id)
-
-    res
+    storage.findTweet(request.id)
   }
 
   def likeTweet(request: LikeRequest): Result[Tweet] = {

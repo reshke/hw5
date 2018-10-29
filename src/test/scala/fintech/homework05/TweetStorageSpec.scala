@@ -17,7 +17,7 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
   val longTweet = Tweet("0",
     "1010100101010101",
-    "Hello #there vierjgoiejriogjeiorgjioerfjoiwjfoiwrjfIAMTHECLITCOMANDERowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwefvierjgoiejriogjeiorgjioerfjoiwjfoiwrjfoiwejfiowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwef",
+    "Hello #there vierjgoiejriogjeiorgjioerfjoiwjfoiwrjfIAMTHECLITCOMANDERowejfoijwefoijoifjweoifjwoiefПАНКИХОЙРЕПОТСТОЙjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwefvierjgoiejriogjeiorgjioerfjoiwjfoiwrjfoiwejfiowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwef",
     Seq("#there"),
     Some(Instant.now), 0)
 
@@ -58,7 +58,7 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
     anotherRes match {
       case Error(errorMessage) => errorMessage should be("there is no tweet with such id")
-      case Success(result)=>
+      case Success(_)=>
         throw new AssertionError("Tweet was not deleted")
     }
   }
@@ -69,7 +69,7 @@ class TweetStorageSpec extends FlatSpec with Matchers {
     val res = storage.findTweet(tweet.id + "reigioerjgioerg")
     res match {
       case Error(errorMessage) => errorMessage should be("Failed to find tweet : there is no tweet with such id")
-      case Success(result) =>
+      case Success(_) =>
         throw new AssertionError("Nonexistent tweet was found")
     }
   }
@@ -82,7 +82,7 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
     res match {
       case Error(errorMessage) => errorMessage should be("Failed to write a new tweet : incorrect id")
-      case Success(result) =>
+      case Success(_) =>
         throw new AssertionError("Tweet was saved 2 times")
     }
   }
@@ -93,7 +93,7 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
     res match {
       case Error(errorMessage) => errorMessage should be("Tweet is too long")
-      case Success(result) =>
+      case Success(_) =>
         throw new AssertionError("Too long tweet saved")
     }
   }
