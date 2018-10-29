@@ -17,43 +17,61 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
   val longTweet = Tweet("0",
     "1010100101010101",
-    "Hello #there vierjgoiejriogjeiorgjioerfjoiwjfoiwrjfoiwejfiowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwefvierjgoiejriogjeiorgjioerfjoiwjfoiwrjfoiwejfiowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwef",
+    "Hello #there vierjgoiejriogjeiorgjioerfjoiwjfoiwrjfIAMTHECLITCOMANDERowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwefvierjgoiejriogjeiorgjioerfjoiwjfoiwrjfoiwejfiowejfoijwefoijoifjweoifjwoiefjoiwefjoiwejfoiwejfoiwejfoiwejfoiwjefoiwjefoijewfoijweoifjweoifjwoiefjiowejfoiwejfoiwef",
     Seq("#there"),
     Some(Instant.now), 0)
 
   it should "write tweet into storage correctly" in {
     val storage = new Storage()
     val res = storage.writeTweet(tweet)
-    res.getResultState() should be(ResultState.Success)
-    res.getResult().get should be(tweet)
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(result)=>
+        result.get should be (tweet)
+    }
   }
 
   it should "find tweet by id well" in {
     val storage = new Storage()
     storage.writeTweet(tweet)
     val res = storage.findTweet(tweet.id)
-    res.getResultState() should be(ResultState.Success)
-    res.getResult().get should be(tweet)
+
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(result)=>
+        result.get should be (tweet)
+    }
   }
 
   it should "delete tweet by id well" in {
     val storage = new Storage()
     storage.writeTweet(tweet)
     val res = storage.deleteTweet(tweet.id)
-    res.getResultState() should be(ResultState.Success)
-    res.getResult().get should be(tweet)
+
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(result)=>
+        result.get should be (tweet)
+    }
 
     val anotherRes = storage.deleteTweet(tweet.id)
-    anotherRes.getResultState() should be(ResultState.Error)
-    anotherRes.getErrorMessage() should be("there is no tweet with such id")
+
+    anotherRes match {
+      case Error(errorMessage) => errorMessage should be("there is no tweet with such id")
+      case Success(result)=>
+        throw new AssertionError("Tweet was not deleted")
+    }
   }
 
   it should "do not find irrelevant" in {
     val storage = new Storage()
     storage.writeTweet(tweet)
     val res = storage.findTweet(tweet.id + "reigioerjgioerg")
-    res.getResultState() should be(ResultState.Error)
-    res.getErrorMessage() should be("Failed to find tweet : there is no tweet with such id")
+    res match {
+      case Error(errorMessage) => errorMessage should be("Failed to find tweet : there is no tweet with such id")
+      case Success(result) =>
+        throw new AssertionError("Nonexistent tweet was found")
+    }
   }
 
   it should "do not write the same tweet more than 1 time" in {
@@ -62,15 +80,22 @@ class TweetStorageSpec extends FlatSpec with Matchers {
 
     val res = storage.writeTweet(tweet)
 
-    res.getResultState() should be(ResultState.Error)
-    res.getErrorMessage() should be("Failed to write a new tweet : incorrect id")
+    res match {
+      case Error(errorMessage) => errorMessage should be("Failed to write a new tweet : incorrect id")
+      case Success(result) =>
+        throw new AssertionError("Tweet was saved 2 times")
+    }
   }
 
   it should "not write too long tweet" in {
     val storage = new Storage()
     val res = storage.writeTweet(longTweet)
-    res.getResultState() should be(ResultState.Error)
-    res.getErrorMessage() should be("Tweet is too long")
+
+    res match {
+      case Error(errorMessage) => errorMessage should be("Tweet is too long")
+      case Success(result) =>
+        throw new AssertionError("Too long tweet saved")
+    }
   }
 }
 

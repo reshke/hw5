@@ -39,28 +39,14 @@ case class CreateTweetRequest(text: String, user: String)
 case class GetTweetRequest(id: String)
 case class LikeRequest(id: String)
 
-object ResultState extends Enumeration {
-  type ResultState = Value
-  val Error, Success = Value
-}
-
-import ResultState._
-
 sealed trait Result[T] {
-  def getResultState(): ResultState
-
-  def getErrorMessage(): String
-
-  def getResult(): Option[T]
 }
 
-case class TweetInfo(value : ResultState)
-                    (result : Option[Tweet] = Option.empty[Tweet])
-                    (errorMessage : String = "No error occurred") extends Result[Tweet] {
-  def getResultState(): ResultState = value
+case class Error(errorMessage : String = "Some errors ocupped") extends Result[Tweet]{
+  def getErrorMessage() : String = errorMessage
+}
 
-  def getErrorMessage(): String = errorMessage
-
+case class Success(result : Option[Tweet] = Option.empty[Tweet]) extends Result[Tweet] {
   def getResult(): Option[Tweet] = result
 }
 
@@ -72,18 +58,18 @@ trait TweetStorage {
   def findTweet(id: String): Result[Tweet]
 }
 
-class Storage(var map: Map[String, Tweet] = Map.empty) extends TweetStorage {
+class Storage(private var map: Map[String, Tweet] = Map.empty) extends TweetStorage {
   override def writeTweet(tweet: Tweet): Result[Tweet] = {
     if (map contains tweet.id) {
-      TweetInfo(Error)()("Failed to write a new tweet : incorrect id")
+      Error("Failed to write a new tweet : incorrect id")
     }
     else {
       if (tweet.text.length > 280) {
-        TweetInfo(Error)()("Tweet is too long")
+        Error("Tweet is too long")
       }
       else {
         map += (tweet.id -> tweet)
-        TweetInfo(Success)(Some(tweet))()
+        Success(Some(tweet))
       }
     }
   }
@@ -92,19 +78,19 @@ class Storage(var map: Map[String, Tweet] = Map.empty) extends TweetStorage {
     val tweet = map.get(id)
     if (tweet.isDefined) {
       map -= id
-      TweetInfo(Success)(tweet)()
+      Success(tweet)
     }
     else {
-      TweetInfo(Error)(tweet)(errorMessage = "there is no tweet with such id")
+      Error(errorMessage = "there is no tweet with such id")
     }
   }
 
   override def findTweet(id: String): Result[Tweet] = {
     val tweet = map.get(id)
     if (tweet.isDefined)
-      TweetInfo(Success)(tweet)()
+      Success(tweet)
     else
-      TweetInfo(Error)()("Failed to find tweet : there is no tweet with such id")
+      Error("Failed to find tweet : there is no tweet with such id")
   }
 }
 
@@ -113,38 +99,29 @@ class TweetApi(storage: TweetStorage) {
     val text = request.text
     val user = request.user
 
-    val reg : Regex = "#[0-9A-Za-z]+".r
+    val reg: Regex = "#[0-9A-Za-z]+".r
 
-    val hashTags = for (hashTag <- reg.findAllMatchIn(text)) yield hashTag.toString()
-    var seq : Seq[String] = Seq.empty[String]
-
-    for (each <- hashTags)
-      seq = seq :+ each
-
-    TweetInfo(Success)(storage.writeTweet(Tweet(UUID.randomUUID.toString,
-      user, text, seq, Some(Instant.now()), 0)) getResult())()
+    val hashTags = (for (hashTag <- reg.findAllMatchIn(text)) yield hashTag.toString()).toSeq
+    storage.writeTweet(Tweet(UUID.randomUUID.toString, user, text, hashTags, Some(Instant.now()), 0))
   }
 
   def getTweet(request: GetTweetRequest): Result[Tweet] = {
     val res = storage.findTweet(request.id)
 
-    if (res.getResultState == Error)
-      TweetInfo(Error)()(res.getErrorMessage())
-    else
-      TweetInfo(Success)(res.getResult())()
+    res
   }
 
   def likeTweet(request: LikeRequest): Result[Tweet] = {
     val res = storage.findTweet(request.id)
-    res.getResultState() match {
-      case Error => res
-      case Success =>
+    res match {
+      case Error(_) => res
+      case Success(_) =>
         val info = storage.deleteTweet(request.id)
-        info.getResultState() match {
-          case Error => TweetInfo(Error)()("impossible to like this tweet : there is no tweet with such id")
-          case Success =>
-            val tweet = info.getResult().get
-            storage.writeTweet(Tweet(tweet.id, tweet.user, tweet.text, tweet.hashTags, tweet.createdAt, tweet.likes + 1))
+        info match {
+          case Error(_) => Error("impossible to like this tweet : there is no tweet with such id")
+          case Success(result) =>
+            val tweet = result.get
+            storage.writeTweet(tweet.copy(likes = tweet.likes + 1))
         }
     }
   }
@@ -159,12 +136,11 @@ object TweetApiExample extends App {
   val request = CreateTweetRequest(user = "me", text = "Hello, world!")
 
   val response = app.createTweet(request)
-  response.getResultState() match {
-    case Success =>
-      val id = response.getResult().get.id
+  response match {
+    case Success(value) =>
+      val id = value.get.id
       println(s"Created tweet with id: $id")
-    case Error =>
-      val message = response.getErrorMessage()
+    case Error(message) =>
       println(s"Failed to create tweet:  $message")
   }
 }

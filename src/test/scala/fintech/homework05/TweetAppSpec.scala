@@ -7,33 +7,69 @@ class TweetAppSpec extends FlatSpec with Matchers {
 
   it should "create tweet well" in {
     val request = CreateTweetRequest("hello #there", "reshke")
-    val tweet = app.createTweet(request).getResult().get
+    val res = app.createTweet(request)
 
-    tweet should be(Tweet(tweet.id, "reshke", "hello #there", Seq("#there"), tweet.createdAt, 0))
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(value) =>
+        val tweet = value.get
+        tweet should be(Tweet(tweet.id, "reshke", "hello #there", Seq("#there"), tweet.createdAt, 0))
+    }
   }
 
   it should "create tweet with correct hashTags" in {
     val request = CreateTweetRequest("Hello #there #u #how #wav #prev", "some name")
-    val tweet = app.createTweet(request)
+    val res = app.createTweet(request)
 
-    tweet.getResult().get.hashTags should be(Seq("#there", "#u", "#how", "#wav", "#prev"))
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(value) =>
+        val tweet = value.get
+        tweet.hashTags should be(Seq("#there", "#u", "#how", "#wav", "#prev"))
+    }
   }
 
   it should "like tweet well" in {
-    val request = CreateTweetRequest("hello #there", "reshke")
+    val createRequest = CreateTweetRequest("hello #there", "reshke")
+    val res = app.createTweet(createRequest)
 
-    val tweet = app.likeTweet(LikeRequest(app.createTweet(request).getResult().get.id)).getResult().get
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(value) =>
+        val tweet = value.get
+        val id = tweet.id
+        val likeRequest = LikeRequest(id)
 
-    tweet should be(Tweet(tweet.id, "reshke", "hello #there", Seq("#there"), tweet.createdAt, 1))
+
+        val result = app.likeTweet(likeRequest)
+
+        result match {
+          case Error(errorMessage) => throw new AssertionError(errorMessage)
+          case Success(value) =>
+            val tweet = value.get
+
+            tweet should be(Tweet(id, "reshke", "hello #there", Seq("#there"), tweet.createdAt, 1))
+        }
+    }
+
   }
 
   it should "get tweet well" in {
     val request = CreateTweetRequest("hello #there", "reshke")
-    val res = app.createTweet(request).getResult().get
+    val res = app.createTweet(request)
 
-    val tweet = app.getTweet(GetTweetRequest(res.id)).getResult().get
-    tweet should be(res)
+    res match {
+      case Error(errorMessage) => throw new AssertionError(errorMessage)
+      case Success(value) =>
+        val tweet = value.get
+        val id = tweet.id
+        val result = app.getTweet(GetTweetRequest(id))
+
+        result match {
+          case Error(errorMessage) => throw new AssertionError(errorMessage)
+          case Success(value) =>
+            value.get should be(tweet)
+        }
+    }
   }
-
-
 }
